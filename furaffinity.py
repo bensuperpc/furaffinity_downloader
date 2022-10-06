@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from requests.cookies import RequestsCookieJar
 from concurrent.futures import ProcessPoolExecutor
 from itertools import count
@@ -60,7 +62,9 @@ if __name__ == "__main__":
     if not artists:
         logger.error("No artists specified")
         exit(1)
+
     logger.debug(f"Downloading from {artists}")
+    logger.debug(f"Using {args.jobs} jobs")
 
     cookies = RequestsCookieJar()
 
@@ -77,16 +81,17 @@ if __name__ == "__main__":
     api = faapi.FAAPI(cookies)
 
     submissionIDs = []
+
     for artist in artists:
         logger.debug(f"Getting submissions from {artist}")
         for i in count(0):
             gallery, _ = api.gallery(user=artist, page=i)
             if gallery is None or len(gallery) == 0:
                 break
-            print(f"Page {i} has {len(gallery)} submissions")
+            logger.debug(f"Page {i} has {len(gallery)} submissions")
             for submission in gallery:
                 submissionIDs.append(submission.id)
-    print(f"Total {len(submissionIDs)} submissions")
+    logger.debug(f"Total {len(submissionIDs)} submissions")
 
     with ProcessPoolExecutor(max_workers=args.jobs) as executor:
         start = time.perf_counter()

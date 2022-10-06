@@ -66,6 +66,12 @@ COOKIE_B=sfsfsff5-4f5s-3dfd-5df5-1v5b4d4b8aet
 
 _Is not my real tokens :D_
 
+## Usage
+
+```sh
+python furaffinity.py --artists efaru fellfallow --jobs 32
+```
+
 ## Build with
 
 - [FAAPI](https://github.com/FurryCoders/FAAPI)
