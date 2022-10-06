@@ -1,0 +1,14 @@
+requests
+
+faapi
+
+loguru
+
+python-dotenv
+
+isort
+black
+
+pylint
+dlint
+flake8
