@@ -69,7 +69,7 @@ _Is not my real tokens :D_
 ## Usage
 
 ```sh
-python furaffinity.py --artists efaru fellfallow --jobs 32
+python furaffinity.py --artists efaru fellfallow
 ```
 
 ## Build with
