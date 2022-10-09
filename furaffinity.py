@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from pytools import F
 from requests.cookies import RequestsCookieJar
 from concurrent.futures import ProcessPoolExecutor
 import concurrent
@@ -16,12 +15,31 @@ import faapi
 
 
 class FurAffinity:
-    def __init__(self, cookies: RequestsCookieJar = None, a_cookies: str = None, b_cookies: str = None):
+    def __init__(self, **kwargs):
 
-        self.set_cookies(cookies, a_cookies, b_cookies)
+        kwargs.setdefault("cookies", None)
+        kwargs.setdefault("a_cookies", None)
+        kwargs.setdefault("b_cookies", None)
+        kwargs.setdefault("thread_worker", 32)
+        kwargs.setdefault("output_dir", None)
+
+        # for key, val in kwargs.items():
+        #    self.__dict__[key] = val
+
+        logger.info("Initializing FurAffinity")
+
+        self.thread_worker = kwargs["thread_worker"]
+
+        if kwargs["output_dir"] is None:
+            self.output_dir = os.getcwd()
+        else:
+            self.output_dir = kwargs["output_dir"]
+
+        self.set_cookies(kwargs["cookies"],
+                         kwargs["a_cookies"], kwargs["b_cookies"])
         logger.info("FurAffinity initialized")
 
-    # Define cookies
+    # Define cookies for the session
     def set_cookies(self, cookies: RequestsCookieJar = None, a_cookies: str = None, b_cookies: str = None):
 
         if cookies and a_cookies and b_cookies:
@@ -46,7 +64,7 @@ class FurAffinity:
             self.api = faapi.FAAPI(self.cookies)
 
     # Download submissions from ID
-    def download_sub(self, subID: int, wait_time: bool = True, retry_time: int = 5, retry_count: int = 3):
+    def download_submission(self, subID: int, wait_time: bool = True, retry_time: int = 5, retry_count: int = 3):
 
         # To avoid getting errors from the server due to massive downloading, we wait a random amount of time (100-10000ms)
         if wait_time:
@@ -56,11 +74,23 @@ class FurAffinity:
             try:
                 sub, sub_file = self.api.submission(
                     subID, get_file=True, chunk_size=None)
+
+                if sub is None or sub_file is None:
+                    logger.warning(f"Submission {subID} is not found")
+                    return
+
                 logger.debug(
                     f"Downloading {sub.id} {sub.title} {sub.author} {(len(sub_file) / 1024):.3f}KiB")
-                logger.debug(f"Writting {sub.file_url.split('/')[-1]}")
-                # with open(sub.file_url.split("/")[-1], "wb") as f:
-                #    f.write(sub_file)
+
+                output_file = os.path.join(
+                    self.output_dir, sub.file_url.split('/')[-1])
+                logger.debug(f"Writting {output_file}")
+
+                # os.makedirs(self.output_dir, exist_ok=True)
+
+                with open(sub.file_url.split("/")[-1], "wb") as f:
+                    f.write(sub_file)
+
                 break
             except Exception as e:
                 logger.error(e)
@@ -107,13 +137,18 @@ class FurAffinity:
         return submissionIDs
 
     # ThreadPool to download in parallel
-    def thread_pool(self, func: callable, args: list, max_workers: int = 32, in_order: bool = False):
+    def thread_pool(self, func: callable, args: list, max_workers: int = None, in_order: bool = False):
+
+        if max_workers is None:
+            max_workers = self.thread_worker
+        else:
+            self.thread_worker = max_workers
 
         if in_order:
             logger.warning("In order is not tested yet")
 
         results = []
-        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        with ProcessPoolExecutor(max_workers=self.thread_worker) as executor:
             futures = None
             if in_order:
                 futures = executor.map(func, args)
@@ -131,8 +166,10 @@ class FurAffinity:
 
         logger.info(f"Downloading gallery of {user}")
 
-        self.thread_pool(self.download_sub, self.get_all_gallery_submission_id(
+        self.thread_pool(self.download_submission, self.get_all_gallery_submission_id(
             user), max_workers=32, in_order=False)
+
+        logger.info(f"Finished downloading gallery of {user}")
 
 
 if __name__ == "__main__":
@@ -153,8 +190,8 @@ if __name__ == "__main__":
         description='Download submissions from FurAffinity')
     parser.add_argument('-a', '--artists', nargs='+',
                         default=[], help='Artists to download from')
-    # parser.add_argument('-j', '--jobs', type=int, default=32,
-    #                    help="Number of parallel downloads")
+    parser.add_argument('-j', '--jobs', type=int, default=32,
+                        help="Number of parallel downloads")
 
     args = parser.parse_args()
     artists = args.artists
@@ -166,7 +203,8 @@ if __name__ == "__main__":
     logger.debug(f"Downloading from {artists}")
     logger.debug(f"Using {args.jobs} jobs")
 
-    furAffinity = FurAffinity(a_cookies=COOKIE_A, b_cookies=COOKIE_B)
+    furAffinity = FurAffinity(
+        a_cookies=COOKIE_A, b_cookies=COOKIE_B, thread_worker=args.jobs)
 
     for artist in artists:
         furAffinity.download_gallery(artist)
