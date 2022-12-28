@@ -11,7 +11,7 @@ This is my script to download all the images from a furaffinity user.
 ## Features
 
 - [x] FAAPI support
-- [x] Parrallel download
+- [x] Parrallel download (Pool thread)
 - [x] Argument parser
 - [x] Download all the images from multiple artists
 - [ ] Auto update
