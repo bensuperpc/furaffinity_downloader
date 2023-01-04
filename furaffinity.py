@@ -52,7 +52,7 @@ class FurAffinity:
             self.api = faapi.FAAPI(self.cookies)
 
     # Download submissions from ID
-    def download_submission(self, subID: int, wait_time: bool = True, retry_time: int = 5, retry_count: int = 1):
+    def download_submission(self, subID: int, wait_time: bool = True, retry_time: int = 5, retry_count: int = 3):
 
         # To avoid getting errors from the server due to massive downloading, we wait a random amount of time (100-10000ms)
         if wait_time:
