@@ -103,7 +103,7 @@ class FurAffinity:
                         #    "author": sub.author,
                             "type": sub.type,
                             "tags": sub.tags,
-                            "date": sub.date,
+                        #    "date": str(sub.date),
                         #    "description": sub.description,
                             "file_url": sub.file_url,
                             "file_size": len(sub_file),
