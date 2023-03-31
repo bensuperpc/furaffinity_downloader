@@ -7,6 +7,7 @@ from itertools import count
 import argparse
 import time
 import os
+import json
 
 from loguru import logger
 from random import randint
@@ -60,19 +61,19 @@ class FurAffinity:
 
         for _ in range(retry_count):
             try:
-                sub, sub_file = self.api.submission(
-                    subID, get_file=True, chunk_size=None)
+                # Download submission (sub: Submission, sub_file: file)
+                sub, sub_file = self.api.submission(subID, get_file=True, chunk_size=None)
 
                 if sub is None or sub_file is None:
                     logger.warning(f"Submission {subID} is not found")
                     return
 
-                logger.debug(
-                    f"Downloading {sub.id} {sub.title} {sub.author} {(len(sub_file) / 1024):.3f}KiB")
+                logger.debug(f"Downloading {sub.id} {sub.title} {sub.author} {(len(sub_file) / 1024):.3f}KiB")
 
                 file_name = str(sub.file_url.split("/")[-1])
                 artist_name = str(sub.author)
                 submission_type = str(sub.type)
+                tags = str(sub.tags)
 
                 # Check if artist folder does not exist, create it
                 if not os.path.exists(os.path.join(self.output_dir, artist_name)):
@@ -91,7 +92,29 @@ class FurAffinity:
                         f"Successfully downloaded and saved {subID}")
                 else:
                     logger.debug(f"File {file_name} already exists, skipping")
+                
+                logger.debug(f"Saving submission info to json file")
+                #Save submission info to json file
+                if not os.path.exists(os.path.join(self.output_dir, artist_name, submission_type, file_name + ".json")):
+                    with open(os.path.join(self.output_dir, artist_name, submission_type, file_name + ".json"), "w") as f:
+                        json_str = {
+                            "id": sub.id,
+                            "title": sub.title,
+                        #    "author": sub.author,
+                            "type": sub.type,
+                            "tags": sub.tags,
+                            "date": sub.date,
+                        #    "description": sub.description,
+                            "file_url": sub.file_url,
+                            "file_size": len(sub_file),
+                            "category": sub.category,
+                            "species": sub.species,
+                            "gender": sub.gender,
+                            "rating": sub.rating,
+                        }
+                        json.dump(json_str, f, indent=4)
                 break
+
             except Exception as e:
                 logger.error(e)
                 logger.warning(f"Retrying {subID}")
@@ -153,8 +176,7 @@ class FurAffinity:
             if in_order:
                 futures = executor.map(func, args)
             else:
-                futures = list(executor.submit(func, item)
-                               for item in args)
+                futures = list(executor.submit(func, item) for item in args)
                 #futures = list(map(lambda x: executor.submit(func, x), args))
 
             for future in concurrent.futures.as_completed(futures):
@@ -182,7 +204,7 @@ if __name__ == "__main__":
     COOKIE_B = os.environ.get("COOKIE_B", None)
 
     if COOKIE_A is None or COOKIE_B is None:
-        logger.error("No a and b cookies specified")
+        logger.error("No a or b cookies specified")
         exit(1)
 
     # Parse arguments
