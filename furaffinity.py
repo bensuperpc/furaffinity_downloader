@@ -12,8 +12,11 @@ import json
 from loguru import logger
 from random import randint
 from dotenv import load_dotenv
-import faapi
+from typing import Optional
 
+import faapi
+from faapi.connection import join_url
+from faapi.submission import Submission
 
 class FurAffinity:
     def __init__(self, **kwargs):
@@ -62,7 +65,9 @@ class FurAffinity:
         for _ in range(retry_count):
             try:
                 # Download submission (sub: Submission, sub_file: file)
-                sub, sub_file = self.api.submission(subID, get_file=True, chunk_size=None)
+                sub: Submission = Submission(self.api.get_parsed(join_url("view", int(subID))))
+                sub_file: Optional[bytes] = self.api.submission_file(sub, chunk_size=None)
+
 
                 if sub is None or sub_file is None:
                     logger.warning(f"Submission {subID} is not found")
@@ -88,23 +93,24 @@ class FurAffinity:
                 if not os.path.exists(os.path.join(self.output_dir, artist_name, submission_type, file_name)):
                     with open(os.path.join(self.output_dir, artist_name, submission_type, file_name), "wb") as f:
                         f.write(sub_file)
-                    logger.success(
-                        f"Successfully downloaded and saved {subID}")
                 else:
                     logger.debug(f"File {file_name} already exists, skipping")
                 
                 logger.debug(f"Saving submission info to json file")
                 #Save submission info to json file
                 if not os.path.exists(os.path.join(self.output_dir, artist_name, submission_type, file_name + ".json")):
-                    with open(os.path.join(self.output_dir, artist_name, submission_type, file_name + ".json"), "w") as f:
+                    with open(os.path.join(self.output_dir, artist_name, submission_type, file_name + ".json"), mode="w", encoding='utf-8',) as f:
                         json_str = {
                             "id": sub.id,
                             "title": sub.title,
                         #    "author": sub.author,
                             "type": sub.type,
                             "tags": sub.tags,
-                        #    "date": str(sub.date),
-                        #    "description": sub.description,
+                            "folder": sub.folder,
+                            "stats": sub.stats,
+                            "thumbnail_url": sub.thumbnail_url,
+                            "date": str(sub.date),
+                            "description": sub.description,
                             "file_url": sub.file_url,
                             "file_size": len(sub_file),
                             "category": sub.category,
@@ -113,6 +119,9 @@ class FurAffinity:
                             "rating": sub.rating,
                         }
                         json.dump(json_str, f, indent=4)
+                else:
+                    logger.debug(f"File {file_name}.json already exists, skipping")
+                logger.success(f"Successfully treated {subID}")
                 break
 
             except Exception as e:
@@ -120,9 +129,6 @@ class FurAffinity:
                 logger.warning(f"Retrying {subID}")
                 time.sleep(retry_time)
                 continue
-            else:
-                logger.debug(f"Successfully downloaded {subID}")
-                break
         else:
             logger.error(f"Failed to download {subID}")
             return
@@ -133,8 +139,8 @@ class FurAffinity:
 
         logger.info(f"Getting submission IDs of {user} from gallery")
         for i in count(0):
-            gallery, _ = self.api.gallery(user=user, page=i)
-            if gallery is None or len(gallery) == 0:
+            gallery, page = self.api.gallery(user=user, page=i)
+            if (len(gallery) == 0 or gallery is None):
                 break
             logger.debug(f"Page {i} has {len(gallery)} submissions")
             for submission in gallery:
@@ -149,8 +155,8 @@ class FurAffinity:
 
         logger.info(f"Getting submission IDs of {user} from scraps")
         for i in count(0):
-            scraps, _ = self.api.scraps(user=user, page=i)
-            if scraps is None or len(scraps) == 0:
+            scraps, page = self.api.scraps(user=user, page=i)
+            if (len(scraps) == 0 or scraps is None):
                 break
             logger.debug(f"Page {i} has {len(scraps)} submissions")
             for submission in scraps:
@@ -181,15 +187,21 @@ class FurAffinity:
 
             for future in concurrent.futures.as_completed(futures):
                 results.append(future.result())
+                logger.debug(f"Finished {len(results)} of {len(args)}")
 
         return results
 
     def download_gallery(self, user: str):
 
         logger.info(f"Downloading gallery of {user}")
+        all_gallery_submission_id : list = self.get_all_gallery_submission_id(user)
+        all_scraps_submission_id : list = self.get_all_scraps_submission_id(user)
 
-        self.thread_pool(self.download_submission, self.get_all_gallery_submission_id(
-            user), max_workers=32, in_order=False)
+        logger.info(f"Removing duplicates in gallery and scraps")
+        all_submission_id : list = list(set(all_gallery_submission_id + all_scraps_submission_id))
+        
+        logger.info(f"Total {len(all_submission_id)} submissions")
+        self.thread_pool(self.download_submission, all_submission_id, max_workers=32, in_order=False)
 
         logger.info(f"Finished downloading gallery of {user}")
 
