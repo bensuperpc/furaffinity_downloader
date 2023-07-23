@@ -25,8 +25,8 @@ class FurAffinity:
         self.set_cookies(kwargs.get("cookies", None),
                          kwargs.get("a_cookies", None), kwargs.get("b_cookies", None))
 
-        #kwargs.setdefault("thread_worker", 32)
-        self.thread_worker = kwargs.get("thread_worker", 32)
+        #kwargs.setdefault("thread_worker", 8)
+        self.thread_worker = kwargs.get("thread_worker", 8)
         self.output_dir = kwargs.get("output_dir", os.getcwd())
 
         # for key, val in kwargs.items():
@@ -95,15 +95,15 @@ class FurAffinity:
                         f.write(sub_file)
                 else:
                     logger.debug(f"File {file_name} already exists, skipping")
-                
+
                 logger.debug(f"Saving submission info to json file")
                 #Save submission info to json file
-                if not os.path.exists(os.path.join(self.output_dir, artist_name, submission_type, file_name + ".json")):
+                if not os.path.exists(os.path.join(self.output_dir, artist_name, submission_type, file_name + ".json")) or True:
                     with open(os.path.join(self.output_dir, artist_name, submission_type, file_name + ".json"), mode="w", encoding='utf-8',) as f:
                         json_str = {
                             "id": sub.id,
                             "title": sub.title,
-                        #    "author": sub.author,
+                            "author": "", #str(sub.author),
                             "type": sub.type,
                             "tags": sub.tags,
                             "folder": sub.folder,
@@ -199,9 +199,9 @@ class FurAffinity:
 
         logger.info(f"Removing duplicates in gallery and scraps")
         all_submission_id : list = list(set(all_gallery_submission_id + all_scraps_submission_id))
-        
+
         logger.info(f"Total {len(all_submission_id)} submissions")
-        self.thread_pool(self.download_submission, all_submission_id, max_workers=32, in_order=False)
+        self.thread_pool(self.download_submission, all_submission_id, max_workers=8, in_order=False)
 
         logger.info(f"Finished downloading gallery of {user}")
 
@@ -224,19 +224,32 @@ if __name__ == "__main__":
         description='Download submissions from FurAffinity')
     parser.add_argument('-a', '--artists', nargs='+',
                         default=[], help='Artists to download from')
-    parser.add_argument('-j', '--jobs', type=int, default=32,
-                        help="Number of parallel downloads, by default it is 32")
+    parser.add_argument('-j', '--jobs', type=int, default=8,
+                        help="Number of parallel downloads, by default it is 8")
     parser.add_argument('-o', '--output', default=os.getcwd(),
                         help="Output directory, by default it is the current directory")
-
+    # From file one artist per line
+    parser.add_argument('-f', '--file', default=None,
+                        help="File containing artists, one artist per line")
     args = parser.parse_args()
     artists = args.artists
+    file = args.file
 
-    if not artists:
-        logger.error("No artists specified")
+    if not artists and not file:
+        logger.error("No artists or file specified")
         exit(1)
+    
+    if artists and file:
+        logger.error("Artists and file are mutually exclusive")
+        exit(1)
+        
+    if file:
+        # Read artists from file
+        with open(file, "r") as f:
+            artists = f.read().splitlines()
+            
 
-    logger.debug(f"Downloading from {artists}")
+    logger.debug(f"Downloading {len(artists)} artists")
     logger.debug(f"Using {args.jobs} jobs")
 
     furAffinity = FurAffinity(
@@ -244,3 +257,4 @@ if __name__ == "__main__":
 
     for artist in artists:
         furAffinity.download_gallery(artist)
+        logger.info(f"Finished downloading gallery of {artist}")
