@@ -56,7 +56,7 @@ class FurAffinity:
             self.api = faapi.FAAPI(self.cookies)
 
     # Download submissions from ID
-    def download_submission(self, subID: int, wait_time: bool = True, retry_time: int = 5, retry_count: int = 3):
+    def download_submission(self, subID: int, wait_time: bool = True, retry_time: int = 5, retry_count: int = 5):
 
         # To avoid getting errors from the server due to massive downloading, we wait a random amount of time (100-10000ms)
         if wait_time:
@@ -88,6 +88,7 @@ class FurAffinity:
                 if not os.path.exists(os.path.join(self.output_dir, artist_name, submission_type)):
                     os.makedirs(os.path.join(self.output_dir,
                                 artist_name, submission_type))
+                    logger.debug(f"Created folder {submission_type}")
 
                 # Check if submission file does not exist, create it
                 if not os.path.exists(os.path.join(self.output_dir, artist_name, submission_type, file_name)):
@@ -154,15 +155,24 @@ class FurAffinity:
         submissionIDs = []
 
         logger.info(f"Getting submission IDs of {user} from scraps")
-        for i in count(0):
-            scraps, page = self.api.scraps(user=user, page=i)
-            if (len(scraps) == 0 or scraps is None):
-                break
-            logger.debug(f"Page {i} has {len(scraps)} submissions")
-            for submission in scraps:
-                submissionIDs.append(submission.id)
+        for _ in range(5):
+            try:
+                for i in count(0):
+                    scraps, page = self.api.scraps(user=user, page=i)
+                    if (len(scraps) == 0 or scraps is None):
+                        break
+                    logger.debug(f"Page {i} has {len(scraps)} submissions")
+                    for submission in scraps:
+                        submissionIDs.append(submission.id)
 
-        logger.debug(f"Total {len(submissionIDs)} submissions")
+                logger.debug(f"Total {len(submissionIDs)} submissions")
+                break
+
+            except Exception as e:
+                logger.error(e)
+                logger.warning(f"Retrying {user}")
+                time.sleep(2)
+                continue
         return submissionIDs
 
     # ThreadPool to download in parallel
