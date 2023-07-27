@@ -82,13 +82,13 @@ _Is not my real tokens :D_
 ### From arguments
 
 ```sh
-python furaffinity.py --artists efaru fellfallow # Great artists, i recommend you support them ^^
+python furaffinity.py --artists Artist1 Artist2
 ```
 
 ### From file
 
 ```sh
-cat echo "efaru\nfellfallow" > artists.txt
+cat echo "Artist1\nArtist2" > artists.txt
 ```
 
 ```sh
