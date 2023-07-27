@@ -6,7 +6,7 @@
 
 ## About
 
-This is my script to download all the images from a furaffinity user.
+This is my script to download all the images from a furaffinity artists/users.
 
 ## Features
 
@@ -16,6 +16,7 @@ This is my script to download all the images from a furaffinity user.
 - [x] Argument parser
 - [x] Download all the images from multiple artists
 - [x] Download all the images from file
+- [x] Automatic retry on fail
 - [ ] Partial update
 - [ ] Optimize download speed
 - [ ] Auto update
@@ -23,7 +24,7 @@ This is my script to download all the images from a furaffinity user.
 ## Tests
 - [x] Empty artists list
 - [x] Timeout
-- [x] Download during 7 days (and 200 Go)
+- [x] Download during 7 days (and 246 Go data)
 
 
 ## Screenshots
