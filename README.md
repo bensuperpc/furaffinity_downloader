@@ -11,10 +11,20 @@ This is my script to download all the images from a furaffinity user.
 ## Features
 
 - [x] FAAPI support
+- [x] Download image with json (with tags, type, gender etc...)
 - [x] Parrallel download (Pool thread)
 - [x] Argument parser
 - [x] Download all the images from multiple artists
+- [x] Download all the images from file
+- [ ] Partial update
+- [ ] Optimize download speed
 - [ ] Auto update
+
+## Tests
+- [x] Empty artists list
+- [x] Timeout
+- [x] Download during 7 days (and 200 Go)
+
 
 ## Screenshots
 
@@ -25,7 +35,7 @@ This is my script to download all the images from a furaffinity user.
 - [Python 3.10](https://www.python.org/)
 - [pip](https://pypi.org/project/pip/)
 - [Git](https://git-scm.com/)
-- [Furaffinity account](https://www.furaffinity.net/) and their A and B cookies
+- [Furaffinity account](https://www.furaffinity.net/) and their A and B cookies (You can get with F12 key)
 
 ### Clone and config
 
@@ -68,8 +78,20 @@ _Is not my real tokens :D_
 
 ## Usage
 
+### From arguments
+
 ```sh
-python furaffinity.py --artists efaru fellfallow
+python furaffinity.py --artists efaru fellfallow # Great artists, i recommend you support them ^^
+```
+
+### From file
+
+```sh
+cat echo "efaru\nfellfallow" > artists.txt
+```
+
+```sh
+python furaffinity.py --file artists.txt # One artist per line
 ```
 
 ## Build with
@@ -80,6 +102,11 @@ python furaffinity.py --artists efaru fellfallow
 - [Gnu Make](https://www.gnu.org/software/make/)
 - [Github Actions](https://docs.github.com/en/actions)
 
+## Important
+
+I am not responsible for the use that may be made of this software.
+
 ## License
 
 [License](LICENSE)
+
